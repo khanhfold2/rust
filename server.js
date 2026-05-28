@@ -14,11 +14,31 @@ app.get('/stream-apk', async (req, res) => {
     return res.status(400).send('Missing appId parameter');
   }
 
-  const selectedSource = source || 'apkpure';
+  let selectedSource = source || 'apkpure';
   const tempDir = '/tmp';
   
+  // Chuẩn hóa tên nguồn tải
+  if (selectedSource === 'googleplay' || selectedSource === 'playstore') {
+    selectedSource = 'google-play';
+  }
+
   // Tạo lệnh chạy apkeep CLI
   let command = `apkeep -d ${selectedSource}`;
+
+  // Cấu hình bảo mật nâng cao cho Google Play Store
+  if (selectedSource === 'google-play') {
+    const email = process.env.GOOGLE_PLAY_EMAIL;
+    const token = process.env.GOOGLE_PLAY_AAS_TOKEN;
+    
+    if (email && token) {
+      command += ` -e "${email}" -t "${token}"`;
+    } else {
+      console.warn("Cảnh báo: Thiếu GOOGLE_PLAY_EMAIL hoặc GOOGLE_PLAY_AAS_TOKEN trong biến môi trường!");
+      return res.status(400).send('Google Play downloads require credentials. Please configure GOOGLE_PLAY_EMAIL and GOOGLE_PLAY_AAS_TOKEN on Render.');
+    }
+  }
+
+  // Thêm tham số package app
   if (version) {
     command += ` -a "${appId}@${version}"`;
   } else {
